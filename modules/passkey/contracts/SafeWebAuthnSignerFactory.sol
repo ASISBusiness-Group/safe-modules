@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity 0.8.26;
+pragma solidity ^0.8.20;
 
 import {ISafeSignerFactory} from "./interfaces/ISafeSignerFactory.sol";
 import {SafeWebAuthnSignerProxy} from "./SafeWebAuthnSignerProxy.sol";
@@ -42,6 +42,7 @@ contract SafeWebAuthnSignerFactory is ISafeSignerFactory {
                 uint256(P256.Verifiers.unwrap(verifiers))
             )
         );
+        // Standard CREATE2 address calculation: keccak256(0xff || factory || salt || hash(init_code))
         signer = address(uint160(uint256(keccak256(abi.encodePacked(hex"ff", address(this), bytes32(0), codeHash)))));
     }
 
@@ -60,6 +61,7 @@ contract SafeWebAuthnSignerFactory is ISafeSignerFactory {
 
     /**
      * @inheritdoc ISafeSignerFactory
+     * @dev Note: Returns bytes4(0) if the staticcall fails or returns unexpected data.
      */
     function isValidSignatureForSigner(
         bytes32 message,
@@ -75,6 +77,8 @@ contract SafeWebAuthnSignerFactory is ISafeSignerFactory {
             y,
             verifiers
         );
+
+        magicValue = bytes4(0);
 
         // solhint-disable-next-line no-inline-assembly
         assembly ("memory-safe") {
